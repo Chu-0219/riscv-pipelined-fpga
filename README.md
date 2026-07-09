@@ -1,39 +1,45 @@
-# Verilog Project
+# riscv-pipelined-fpga
 
-## 项目简介
+Day-by-day build log for a 5-stage pipelined RISC-V (RV32I) core,
+targeting a Digilent Basys 3 (Artix-7) FPGA. Verification is treated
+as a first-class deliverable, not an afterthought — every module gets
+a test plan and a self-checking testbench.
 
-（在此处简要描述你的项目功能）
+## Goal
 
-## 目录结构
+Build a readable, well-tested RV32I pipelined core — hazard detection,
+forwarding, control-hazard handling — that runs correctly both in
+simulation and on real hardware.
 
-```
-├── rtl/          # RTL 设计源文件（.v）
-├── tb/           # Testbench 仿真测试文件
-├── constraints/  # 约束文件（管脚、时序）
-├── docs/         # 文档
-└── README.md
-```
+## Status
 
-## 工具链
+Day 0 — environment setup, board not yet arrived (arrives tomorrow).
 
-- **Icarus Verilog** — 编译与仿真
-- **GTKWave** — 波形查看
+## Day 0 (2026-07-09)
 
-## 快速开始
+- Installed Vivado ML Edition (WebPACK, free).
+- Installed Icarus Verilog + GTKWave for fast local iteration.
+- Installed Digilent cable drivers (`install_drivers_wrapper.bat`)
+  and added Basys 3 board files from `Digilent/vivado-boards`.
+- Set up this repo.
+- Skimmed Harris & Harris ch.4 (HDLs) as warm-up for tomorrow.
 
-### 编译与仿真
+Board arrives tomorrow — first hardware bring-up (LED blink test)
+planned for Day 1.
 
-```bash
-iverilog -o <输出文件名> <源文件> <testbench文件>
-vvp <输出文件名>
-```
+## Repo structure
 
-### 查看波形
+    /rtl          RTL source (Verilog)
+    /tb           Testbenches
+    /constraints  XDC constraint files
+    /docs         Test plans, weekly notes, design docs
 
-```bash
-gtkwave <波形文件>.vcd
-```
+## Roadmap
 
-## License
-
-（请在此处添加许可证信息）
+- [ ] Verilog fundamentals + combinational/sequential basics
+- [ ] Self-checking testbench conventions
+- [ ] RV32I ALU, immediate generator, control unit
+- [ ] Single-cycle datapath, integrated and verified
+- [ ] Formal verification test plan + directed test suite
+- [ ] Pipeline conversion, hazard detection, forwarding
+- [ ] FPGA bring-up + demo
