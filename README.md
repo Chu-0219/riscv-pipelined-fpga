@@ -13,7 +13,6 @@ simulation and on real hardware.
 
 ## Status
 
-
 Day 1 complete — toolchain verified end-to-end on Basys 3.
 
 ## Day 0 (2026-07-09)
@@ -54,8 +53,4 @@ Toolchain confirmed working end-to-end.
 - [ ] Single-cycle datapath, integrated and verified
 - [ ] Formal verification test plan + directed test suite
 - [ ] Pipeline conversion, hazard detection, forwarding
-<<<<<<< HEAD
 - [ ] FPGA bring-up + demo
-=======
-- [ ] FPGA bring-up + demo
->>>>>>> f948c4fe02f633172d2e77505035761a92628003
