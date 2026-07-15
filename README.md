@@ -13,7 +13,9 @@ simulation and on real hardware.
 
 ## Status
 
-Day 1 complete — toolchain verified end-to-end on Basys 3.
+Toolchain verified end-to-end on Basys 3. Currently working through
+Verilog fundamentals: basic combinational modules are done, and the
+first self-checking testbench (4-bit adder) is passing.
 
 ## Day 0 (2026-07-09)
 
@@ -37,6 +39,30 @@ Day 1 complete — toolchain verified end-to-end on Basys 3.
   JTAG program, toggling SW0–15 correctly drives LD0–15.
 
 Toolchain confirmed working end-to-end.
+
+## Combinational Logic & Testbench Fundamentals
+
+- `rtl/mux2to1.v`: 2-to-1 multiplexer using a ternary `assign`.
+- `rtl/adder4bit.v`: 4-bit adder using concatenation (`{cout, sum} = a + b + cin`)
+  to capture the carry-out alongside the sum in one line.
+- `rtl/priority_encoder.v`: priority encoder using `casez` with wildcard
+  matching; includes a `default` branch to avoid unintended latch inference.
+- Hit and resolved several Verilog syntax issues along the way: missing
+  semicolon after a port list (caused cascading syntax errors on later
+  lines), missing colons in `casez` branches, wrong radix specifier
+  (`'d` used where `'b` was intended), and mismatched signal names between
+  a declaration and an instantiation — Verilog's implicit wire declaration
+  silently created a new signal instead of raising a compile error, which
+  was the most instructive bug of the batch.
+- Learned testbench fundamentals: `initial` blocks, `$display` for
+  printing signal values, and DUT instantiation via named port
+  connections (`.port(signal)`).
+- `tb/adder4bit_tb.v`: first self-checking testbench. Rather than
+  printing values for manual inspection, it computes the expected sum
+  internally and asserts PASS/FAIL via `if-else` — the self-checking
+  pattern this project treats as a baseline habit going forward.
+- Compiled and simulated with Icarus Verilog (`iverilog` + `vvp`);
+  confirmed PASS on the first test case.
 
 ## Repo structure
 
