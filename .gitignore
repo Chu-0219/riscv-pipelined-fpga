@@ -11,3 +11,7 @@
 *.xpr
 *.out
 *.vcd
+build/
+*_sim
+*.vvp
+*.vcd
