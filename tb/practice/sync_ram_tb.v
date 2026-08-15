@@ -24,7 +24,7 @@ module sync_ram_tb;
     // 注意: 路径相对于运行 vvp 的目录 (仓库根目录)
     sync_ram #(
         .WIDTH(WIDTH), .DEPTH(DEPTH),
-        .INIT_FILE("tb/ram_init.hex")
+        .INIT_FILE("tb/practice/ram_init.hex")
     ) dut (
         .clk(clk), .we(we),
         .addr(addr), .din(din), .dout(dout)

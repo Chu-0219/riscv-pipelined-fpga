@@ -1,82 +1,88 @@
 # riscv-pipelined-fpga
 
-Day-by-day build log for a 5-stage pipelined RISC-V (RV32I) core,
-targeting a Digilent Basys 3 (Artix-7) FPGA. Verification is treated
-as a first-class deliverable, not an afterthought — every module gets
-a test plan and a self-checking testbench.
+A from-scratch RV32I processor core in Verilog. Every module is hand-written RTL and covered by a self-checking testbench — verification is treated as a first-class deliverable, not an afterthought.
 
-## Goal
+- **Goal** — a 5-stage pipelined RV32I core, with hazard detection and forwarding, running on a Digilent Basys 3 (Artix-7) board.
+- **Where it is today** — the datapath and control modules are written and verified individually; single-cycle top-level integration is in progress. Pipelining has **not** started yet.
 
-Build a readable, well-tested RV32I pipelined core — hazard detection,
-forwarding, control-hazard handling — that runs correctly both in
-simulation and on real hardware.
+The repository name describes the goal. The table below describes today.
 
-## Status
+---
 
-Toolchain verified end-to-end on Basys 3. Currently working through
-Verilog fundamentals: basic combinational modules are done, and the
-first self-checking testbench (4-bit adder) is passing.
+## Status (updated 2026-08-15)
 
-## Day 0 (2026-07-09)
+| Done & verified | In progress | Planned (after Sep 2026) |
+| --- | --- | --- |
+| `alu.v` — 32-bit ALU, incl. SRA / SLTU / LUI (36/36 checks pass) | Single-cycle top-level integration: PC logic, instruction & data memory, full module wiring | Pipeline registers (IF/ID, ID/EX, EX/MEM, MEM/WB) |
+| `regfile.v` — 32×32, `x0` hardwired to zero, 2 async reads / 1 sync write | | Hazard detection & forwarding |
+| `imm_gen.v` — all five RV32I immediate formats (26/26 checks pass) | | Branch flush logic |
+| `decoder.v` — main decoder + ALU decoder (26/26 checks pass) | | On-board demo of the core |
+| `alu_regfile_top.v` — ALU + register file integration | | |
+| Toolchain verified end-to-end on Basys 3 (LED passthrough on real hardware) | | |
 
-- Initialized this Git repository.
-- Created the project README.
-- Set up the remote GitHub repository.
+*"Verified" means the module has a testbench in `tb/` that applies a fixed stimulus set, compares each result against an expected value computed inside the testbench, prints PASS/FAIL per case, and ends with a pass/total summary. No manual waveform inspection is needed to know whether a module still works.*
 
-## Day 1 (2026-07-10)
+---
 
-- Board arrived; completed toolchain bring-up on Basys 3.
-- Hit and resolved several environment issues along the way:
-  AMD account profile incomplete (blocked device-file download),
-  7 Series device support not installed (board silently disappeared
-  from the New Project wizard), constraint file not actually added
-  to the project (DRC failed with all 32 ports unconstrained).
-- `rtl/led_passthrough.v`: minimal combinational design
-  (`assign led = sw`) used purely to validate the toolchain.
-- `constraints/basys3_led_test.xdc`: full switch/LED pin mapping
-  for Basys3 rev B/C.
-- Verified on hardware: synthesis → implementation → bitstream →
-  JTAG program, toggling SW0–15 correctly drives LD0–15.
+## Architecture (single-cycle, current integration target)
 
-Toolchain confirmed working end-to-end.
+```
+  PC ──► Instruction Memory ──┬──► Decoder ──────► control signals ──┐
+   ▲                          │                                      │
+   │                          ├──► ImmGen ───────► immediate ─────┐   │
+   │                          │                                   ▼   ▼
+   │                          └──► Register File ──► rs1/rs2 ──► ALU (32-bit)
+   │                                    ▲                            │
+   │                                    │                            ▼
+   │                                    │                       Data Memory
+   │                                    │                            │
+   │                                    └────── write-back ◄─────────┘
+   │
+   └──── PC+4 / branch target ◄──────────────────────────────────────
+```
 
-## Combinational Logic & Testbench Fundamentals
+---
 
-- `rtl/mux2to1.v`: 2-to-1 multiplexer using a ternary `assign`.
-- `rtl/adder4bit.v`: 4-bit adder using concatenation (`{cout, sum} = a + b + cin`)
-  to capture the carry-out alongside the sum in one line.
-- `rtl/priority_encoder.v`: priority encoder using `casez` with wildcard
-  matching; includes a `default` branch to avoid unintended latch inference.
-- Hit and resolved several Verilog syntax issues along the way: missing
-  semicolon after a port list (caused cascading syntax errors on later
-  lines), missing colons in `casez` branches, wrong radix specifier
-  (`'d` used where `'b` was intended), and mismatched signal names between
-  a declaration and an instantiation — Verilog's implicit wire declaration
-  silently created a new signal instead of raising a compile error, which
-  was the most instructive bug of the batch.
-- Learned testbench fundamentals: `initial` blocks, `$display` for
-  printing signal values, and DUT instantiation via named port
-  connections (`.port(signal)`).
-- `tb/adder4bit_tb.v`: first self-checking testbench. Rather than
-  printing values for manual inspection, it computes the expected sum
-  internally and asserts PASS/FAIL via `if-else` — the self-checking
-  pattern this project treats as a baseline habit going forward.
-- Compiled and simulated with Icarus Verilog (`iverilog` + `vvp`);
-  confirmed PASS on the first test case.
+## Build & simulate
 
-## Repo structure
+Toolchain: [Icarus Verilog](https://steveicarus.github.io/iverilog/) + GTKWave for simulation, Vivado for synthesis and board bring-up.
 
-    /rtl          RTL source (Verilog)
-    /tb           Testbenches
-    /constraints  XDC constraint files
-    /docs         Test plans, weekly notes, design docs
+```bash
+iverilog -g2012 -o build/imm_gen_tb.vvp rtl/imm_gen.v tb/imm_gen_tb.v   # compile
+vvp build/imm_gen_tb.vvp                                                # run, prints PASS/FAIL + summary
+gtkwave build/imm_gen_tb.vcd                                            # optional: inspect waveform
+```
+
+Swap the module and testbench names to run any other unit — `alu`, `regfile`, `decoder`.
+
+---
+
+## Repository layout
+
+```
+rtl/                core modules
+rtl/practice/       early Verilog exercises, kept as a record of the learning path
+tb/                 self-checking testbenches for the core modules
+tb/practice/        testbenches for the exercises
+constraints/        XDC constraint files (Basys 3)
+docs/build-log.md   day-by-day build log, including bugs hit and how they were found
+```
+
+---
 
 ## Roadmap
 
-- [ ] Verilog fundamentals + combinational/sequential basics
-- [ ] Self-checking testbench conventions
-- [ ] RV32I ALU, immediate generator, control unit
-- [ ] Single-cycle datapath, integrated and verified
-- [ ] Formal verification test plan + directed test suite
-- [ ] Pipeline conversion, hazard detection, forwarding
-- [ ] FPGA bring-up + demo
+1. Single-cycle integration — connect all modules, run a hand-assembled test program (arithmetic → branch → load/store) and check every instruction against a hand-computed expectation.
+2. Insert pipeline registers, split the datapath into five stages.
+3. Hazard detection and forwarding.
+4. Branch flush logic.
+5. Basys 3 bring-up: constraints, synthesis, on-board demo of the core.
+
+---
+
+## Known limitations
+
+- The core is not yet integrated; the modules above are verified in isolation, plus one ALU + register file integration.
+- Instruction and data memory are behavioural models loaded with `$readmemh`, not FPGA block RAM.
+- No pipelining, therefore no hazard handling yet. Control hazards in particular are a known open item, planned as step 4 above.
+- RV32I base integer instruction set only. No CSRs, no interrupts, no multiply/divide extension.
