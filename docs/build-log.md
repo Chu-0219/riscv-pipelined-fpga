@@ -71,3 +71,31 @@ Three modules committed, all passing self-checking testbenches: `imm_gen.v` (26/
 While hand-encoding `beq x1, x2, -8`, the `imm[4:1]` field was written as `1000`; the correct value is `1100`. The cause was skipping the bit-by-bit labelling step and simply taking the last four characters of the binary representation of -8 — those four bits are `imm[3:0]`, not `imm[4:1]`. The whole field was off by one position.
 
 Worth recording because of what it says about self-checking testbenches generally: a self-checking testbench only proves that the DUT agrees with the expected value written in the testbench. It cannot prove the expected value is right. For instruction encodings, where the expected value is hand-derived, the derivation needs its own check — labelling every bit position explicitly before writing the vector, rather than pattern-matching on a bit string.
+---
+
+## Day 7 · 2026-08-15 — repository cleanup, and three bugs that were all in the test environment
+
+Rewrote the README around a three-column status table, moved this build log
+out of it, sorted the early exercises into `rtl/practice/` and `tb/practice/`,
+added a `.gitignore` for simulation artifacts, and tagged `v0.1`.
+
+Three things broke during the cleanup, and none of them was in a design under
+test:
+
+1. **A hand-derived expected value was wrong.** Encoding `beq x1, x2, -8`, the
+   `imm[4:1]` field was written as the last four bits of -8 — those are
+   `imm[3:0]`. Off by one bit position.
+2. **Stimulus silently failed to load.** Moving files broke the `$readmemh`
+   path in `sync_ram_tb`. `$readmemh` reports a failure and carries on, leaving
+   memory as `x`, so twelve checks failed — but the write-then-read check still
+   passed, because it never depended on the preloaded contents. A testbench
+   with only that one check would have reported success.
+3. **Two core testbenches were deleted by accident** during a batch operation,
+   and were caught only by reading `git status` line by line before committing.
+
+The common shape: a self-checking testbench proves the DUT agrees with the
+expected value written in the testbench. It does not prove the expected value
+was derived correctly, that the stimulus actually reached the DUT, or that the
+test still exists. Those need their own checks — labelling bit positions
+explicitly before writing a vector, and deliberately breaking the DUT once to
+confirm the testbench actually reports FAIL.
