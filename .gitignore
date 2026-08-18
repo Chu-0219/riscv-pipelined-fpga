@@ -5,3 +5,7 @@ build/
 alu_sim
 top_sim
 *_sim
+*.out
+*.vcd
+*.vvp
+build/
