@@ -2,6 +2,11 @@
 // 读 rs1/rs2 -> ALU 运算 -> 写回 rd
 // 立即数旁路: wdata 在 ALU结果 / 立即数 间二选一 (WriteBack mux 雏形)
 // 复用子模块: alu.v (纯组合) + regfile.v (异步读/同步写)
+//
+// 注: alu.v 在第3段改写为固定 32 位、不再参数化。
+//     本模块仍是 8 位数据通路，例化 ALU 时输入高位补零、输出高位截断。
+//     加减与位运算在结果不超过 8 位时正确；SLT / SRA 等有符号操作
+//     因补零而语义改变。彻底对齐留待单周期集成时重写本模块。
 module alu_regfile_top #(
     parameter WIDTH  = 8,
     parameter DEPTH  = 8,
@@ -24,6 +29,12 @@ module alu_regfile_top #(
     wire [WIDTH-1:0] alu_out;
     wire [WIDTH-1:0] wb_data;    // 写回数据 (mux 输出)
 
+    // ALU 侧为固定 32 位，此处显式做位宽转换，
+    // 不依赖 Verilog 的隐式补零/截断，避免静默出错
+    wire [31:0] alu_a = {{(32-WIDTH){1'b0}}, rf_rdata1};
+    wire [31:0] alu_b = {{(32-WIDTH){1'b0}}, rf_rdata2};
+    wire [31:0] alu_out_32;
+
     // --- 写回来源二选一 (WriteBack mux) ---
     assign wb_data = use_imm ? imm : alu_out;
 
@@ -42,17 +53,16 @@ module alu_regfile_top #(
         .rdata2 (rf_rdata2)
     );
 
-    // --- ALU ---
-    alu #(
-        .WIDTH (WIDTH)
-    ) u_alu (
+    // --- ALU (第3段起固定 32 位，无参数) ---
+    alu u_alu (
         .alu_op (alu_op),
-        .a      (rf_rdata1),
-        .b      (rf_rdata2),
-        .result (alu_out),
+        .a      (alu_a),
+        .b      (alu_b),
+        .result (alu_out_32),
         .zero   (zero)
     );
 
+    assign alu_out    = alu_out_32[WIDTH-1:0];
     assign alu_result = alu_out;
 
 endmodule

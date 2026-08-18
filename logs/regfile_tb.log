@@ -1,0 +1,26 @@
+VCD info: dumpfile regfile_tb.vcd opened for output.
+PASS: T1 port1 readback  value=0a
+PASS: T1 port1 readback  value=1a
+PASS: T1 port1 readback  value=2a
+PASS: T1 port1 readback  value=3a
+PASS: T1 port1 readback  value=4a
+PASS: T1 port1 readback  value=5a
+PASS: T1 port1 readback  value=6a
+PASS: T1 port1 readback  value=7a
+PASS: T2 port2 readback  value=0a
+PASS: T2 port2 readback  value=1a
+PASS: T2 port2 readback  value=2a
+PASS: T2 port2 readback  value=3a
+PASS: T2 port2 readback  value=4a
+PASS: T2 port2 readback  value=5a
+PASS: T2 port2 readback  value=6a
+PASS: T2 port2 readback  value=7a
+PASS: T3 port1 addr2  value=2a
+PASS: T3 port2 addr5  value=5a
+PASS: T4 write disabled  value=2a
+PASS: T5a after edge: new value visible  value=99
+PASS: T5b persisted  value=99
+=====================================
+ALL TESTS PASSED
+=====================================
+tb/regfile_tb.v:124: $finish called at 131000 (1ps)

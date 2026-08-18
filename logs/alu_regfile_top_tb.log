@@ -1,0 +1,4 @@
+-------------------------------------
+TOP TB done: 8 PASS, 0 FAIL (total 8)
+ALL PASS
+tb/alu_regfile_top_tb.v:150: $finish called at 191000 (1ps)
