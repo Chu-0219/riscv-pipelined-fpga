@@ -99,3 +99,79 @@ was derived correctly, that the stimulus actually reached the DUT, or that the
 test still exists. Those need their own checks — labelling bit positions
 explicitly before writing a vector, and deliberately breaking the DUT once to
 confirm the testbench actually reports FAIL.
+
+## 2026-08-18　ALU 上板
+
+把 `alu.v` 综合到 Basys 3（xc7a35tcpg236-1），用拨码开关输入、LED 读结果，
+在真实硬件上覆盖了算术、逻辑、移位、比较、zero 标志五类通路。
+
+之前只有 LED 直通上过板（7 月），验的是工具链；这次验的是自己写的 RTL。
+
+### 引脚分配
+
+| 开关 | 用途 |
+|---|---|
+| SW3–SW0 | 操作数 A（低 4 位，高位补零到 32 位） |
+| SW7–SW4 | 操作数 B |
+| SW11–SW8 | `alu_op` 操作码 |
+| SW15–SW12 | 未使用 |
+
+| LED | 含义 |
+|---|---|
+| LD14–LD0 | `result[14:0]` |
+| LD15 | `zero` 标志 |
+
+### alu_op 编码
+
+| 码 | 操作 | 码 | 操作 |
+|---|---|---|---|
+| `0000` | ADD | `0110` | SLL |
+| `0001` | SUB | `0111` | SRL |
+| `0010` | AND | `1000` | SRA |
+| `0011` | OR | `1001` | SLTU |
+| `0100` | XOR | `1010` | LUI |
+| `0101` | SLT | | |
+
+### 板级测试用例
+
+| A | B | op | 预期 | 结果 |
+|---|---|---|---|---|
+| 3 | 5 | ADD | LD3（8） | ✅ |
+| 5 | 3 | SUB | LD1（2） | ✅ |
+| 3 | 3 | SUB | 全灭 + LD15 | ✅ |
+| `1100` | `1010` | AND | LD3（8） | ✅ |
+| `1100` | `1010` | OR | LD3/2/1（14） | ✅ |
+| 1 | 3 | SLL | LD3（8） | ✅ |
+| 3 | 5 | SLT | LD0（1） | ✅ |
+| 7 | 1 | ADD | LD3（8） | ✅ |
+
+![3 + 5 = 8，LD3 亮](images/alu_add_3plus5.jpg)
+![3 - 3 = 0，zero 置位，LD15 亮](images/alu_zero_flag.jpg)
+
+### 综合资源（Report Utilization）
+
+| 项 | 用量 | 可用 | 占比 |
+|---|---|---|---|
+| Slice LUTs | 81 | 20800 | 1% |
+| F7 Muxes | 4 | 16300 | <1% |
+| F8 Muxes | 2 | 8150 | <1% |
+| Bonded IOB | 28 | 106 | 26% |
+| Slice Registers | 0 | 41600 | 0% |
+
+几点观察：
+
+- 81 个 LUT 里，吃掉大头的是加法器进位链和三个 32 位移位器（SLL/SRL/SRA）；
+  AND/OR/XOR/LUI 这些纯位运算几乎不占资源。
+- F7/F8 MUX 是 Xilinx 专门拼宽多路选择器的硬件资源。`case (alu_op)` 有 11 个分支，
+  综合器把它实现成一棵 MUX 树，宽到单个 LUT 装不下时借用 F7/F8。
+- **Slice Registers = 0** 是重要的健康指标：ALU 是纯组合逻辑，不该有任何触发器。
+  若不为 0，说明 `case` 缺分支导致综合器推断出了锁存器（latch）——这是 Verilog
+  组合逻辑最常见的隐蔽 bug。这里因为写了 `default` 分支，没踩到。
+
+### 坑
+
+无。整个流程一次通过。
+
+Vivado 的 GUI 层级较深是唯一的实际阻力——Report Utilization 藏在
+Open Synthesized Design 之后才出现的二级菜单里，第一次找花了些时间。
+不是技术问题，是工具熟悉度问题。
