@@ -1,11 +1,12 @@
 `timescale 1ns/1ps
 module tb_pc_unit;
-    reg         clk = 0, rst = 1, pc_src = 0;
-    reg  [31:0] imm = 32'd0;
+    reg         clk = 0, rst = 1, pc_src = 0, jalr = 0;
+    reg  [31:0] imm = 32'd0, alu_result = 32'd0;
     wire [31:0] pc, pc_plus4, pc_target;
     integer errors = 0, checks = 0;
 
-    pc_unit dut (.clk(clk), .rst(rst), .pc_src(pc_src), .imm(imm),
+    pc_unit dut (.clk(clk), .rst(rst), .pc_src(pc_src), .jalr(jalr),
+                 .alu_result(alu_result), .imm(imm),
                  .pc(pc), .pc_plus4(pc_plus4), .pc_target(pc_target));
 
     always #5 clk = ~clk;
@@ -44,6 +45,21 @@ module tb_pc_unit;
 
         pc_src = 0; #1;
         @(negedge clk); #1; check(pc, 32'd24, "seq after branch");
+
+        // ---- JALR target: comes from the ALU (rs1 + imm), low bit forced to 0
+        // The immediate is left at a non-zero value on purpose: the JALR target
+        // must ignore it entirely and follow alu_result alone.
+        jalr       = 1'b1;
+        alu_result = 32'h0000_1234;
+        #1;
+        check(pc_target, 32'h0000_1234, "jalr target even");
+
+        alu_result = 32'h0000_1235;
+        #1;
+        check(pc_target, 32'h0000_1234, "jalr target low bit cleared");
+
+        jalr = 1'b0;
+        #1;
 
         rst = 1;
         @(negedge clk); #1; check(pc, 32'd0, "sync reset mid-run");
