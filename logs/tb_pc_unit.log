@@ -1,0 +1,3 @@
+tb_pc_unit: 14/14 passed
+PASS
+tb/tb_pc_unit.v:69: $finish called at 81000 (1ps)

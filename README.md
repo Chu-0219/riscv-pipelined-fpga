@@ -100,11 +100,9 @@ logs/               captured simulation output from the self-checking testbenche
 
 ## Known limitations
 
-- The core is not yet integrated; the modules above are verified in isolation, plus one ALU + register file integration.
-- The register file is a generic parameterised design (8×8 as currently instantiated) and does not yet implement the RV32I `x0`-hardwired-to-zero rule. Widening to 32×32 and adding `x0` handling is the next step, part of single-cycle integration.
-- `alu_regfile_top.v` is an 8-bit datapath from an earlier stage. Since `alu.v` was later rewritten as fixed 32-bit, the integration zero-extends its inputs and truncates its output — explicitly, not by relying on Verilog's implicit width conversion. Arithmetic and bitwise results are correct within 8 bits, but signed operations (SLT, SRA) change meaning under zero-extension. This module will be rewritten during single-cycle integration.
+- The core is single-cycle: one instruction per clock, so the cycle time is set by the longest path through instruction fetch, decode, register read, ALU and memory. Pipelining is the next structural step.
+- `alu_regfile_top.v` is an 8-bit datapath from an earlier stage. Since `alu.v` was later rewritten as fixed 32-bit, the integration zero-extends its inputs and truncates its output — explicitly, not by relying on Verilog's implicit width conversion. Arithmetic and bitwise results are correct within 8 bits, but signed operations (SLT, SRA) change meaning under zero-extension. It has been superseded by `top.v` and is kept only as a record of the intermediate step.
 - Instruction and data memory are behavioural models loaded with `$readmemh`, not FPGA block RAM.
 - Data memory supports word accesses only. Byte and half-word accesses (`sb` / `sh` / `lb` / `lh`) need byte enables and `funct3`-driven sign extension, and are not implemented yet.
 - No pipelining, therefore no hazard handling yet. Control hazards in particular are a known open item, planned as step 4 above.
 - RV32I base integer instruction set only. No CSRs, no interrupts, no multiply/divide extension.
-- `pc_unit.v` computes branch targets as `PC + imm`. JALR requires `rs1 + imm` and needs a separate path, to be added during top-level integration.

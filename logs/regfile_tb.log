@@ -1,26 +1,50 @@
-VCD info: dumpfile regfile_tb.vcd opened for output.
-PASS: T1 port1 readback  value=0a
-PASS: T1 port1 readback  value=1a
-PASS: T1 port1 readback  value=2a
-PASS: T1 port1 readback  value=3a
-PASS: T1 port1 readback  value=4a
-PASS: T1 port1 readback  value=5a
-PASS: T1 port1 readback  value=6a
-PASS: T1 port1 readback  value=7a
-PASS: T2 port2 readback  value=0a
-PASS: T2 port2 readback  value=1a
-PASS: T2 port2 readback  value=2a
-PASS: T2 port2 readback  value=3a
-PASS: T2 port2 readback  value=4a
-PASS: T2 port2 readback  value=5a
-PASS: T2 port2 readback  value=6a
-PASS: T2 port2 readback  value=7a
-PASS: T3 port1 addr2  value=2a
-PASS: T3 port2 addr5  value=5a
-PASS: T4 write disabled  value=2a
-PASS: T5a after edge: new value visible  value=99
-PASS: T5b persisted  value=99
-=====================================
-ALL TESTS PASSED
-=====================================
-tb/regfile_tb.v:124: $finish called at 131000 (1ps)
+=== regfile testbench ===
+PASS  init x0 reads zero  got=00000000
+PASS  init x1 reads zero  got=00000000
+PASS  init x31 reads zero  got=00000000
+PASS  write to x0 discarded  got=00000000
+PASS  readback x1..x31  got=12340001
+PASS  readback x1..x31  got=12340002
+PASS  readback x1..x31  got=12340003
+PASS  readback x1..x31  got=12340004
+PASS  readback x1..x31  got=12340005
+PASS  readback x1..x31  got=12340006
+PASS  readback x1..x31  got=12340007
+PASS  readback x1..x31  got=12340008
+PASS  readback x1..x31  got=12340009
+PASS  readback x1..x31  got=1234000a
+PASS  readback x1..x31  got=1234000b
+PASS  readback x1..x31  got=1234000c
+PASS  readback x1..x31  got=1234000d
+PASS  readback x1..x31  got=1234000e
+PASS  readback x1..x31  got=1234000f
+PASS  readback x1..x31  got=12340010
+PASS  readback x1..x31  got=12340011
+PASS  readback x1..x31  got=12340012
+PASS  readback x1..x31  got=12340013
+PASS  readback x1..x31  got=12340014
+PASS  readback x1..x31  got=12340015
+PASS  readback x1..x31  got=12340016
+PASS  readback x1..x31  got=12340017
+PASS  readback x1..x31  got=12340018
+PASS  readback x1..x31  got=12340019
+PASS  readback x1..x31  got=1234001a
+PASS  readback x1..x31  got=1234001b
+PASS  readback x1..x31  got=1234001c
+PASS  readback x1..x31  got=1234001d
+PASS  readback x1..x31  got=1234001e
+PASS  readback x1..x31  got=1234001f
+PASS  port1 reads x1  got=12340001
+PASS  port2 reads x31  got=1234001f
+PASS  port1 reads x7  got=12340007
+PASS  port2 reads x7 same cycle  got=12340007
+PASS  we=0 does not write x10  got=1234000a
+PASS  same-cycle read sees OLD value  got=12340005
+PASS  after edge read sees NEW value  got=cafe0005
+PASS  write all-zero to x31  got=00000000
+PASS  write all-one to x31  got=ffffffff
+PASS  x0 write leaves x1 intact  got=12340001
+=========================================
+RESULT: 45/45 PASSED, 0 FAILED
+=========================================
+tb/regfile_tb.v:189: $finish called at 717000 (1ps)
