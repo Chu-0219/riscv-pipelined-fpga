@@ -6,14 +6,16 @@ module pc_unit (
     input                   clk,
     input                   rst,
     input                   pc_src,
+    input                   jalr,          // 新增
+    input            [31:0] alu_result,    // 新增：jalr 目标 = rs1 + imm，由 ALU 算好
     input            [31:0] imm,
     output reg       [31:0] pc,
     output           [31:0] pc_plus4,
     output           [31:0] pc_target
 );
 
-assign pc_plus4   = pc + 32'd4;
-assign pc_target  = pc + imm;
+assign pc_plus4  = pc + 32'd4;
+assign pc_target = jalr ? {alu_result[31:1], 1'b0} : (pc + imm);
 
 wire [31:0] pc_next = pc_src ? pc_target : pc_plus4;
 

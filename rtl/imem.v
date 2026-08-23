@@ -9,9 +9,13 @@ module imem #(
     output [31:0] instr
 );
 
-    reg [31:0] mem [0:DEPTH-1];
+      reg [31:0] mem [0:DEPTH-1];
 
-    initial $readmemh(INIT_FILE, mem);
+    integer i;
+    initial begin
+        for (i = 0; i < DEPTH; i = i + 1) mem[i] = 32'h0000_0000;
+        $readmemh(INIT_FILE, mem);
+    end
 
     assign instr = mem[addr[9:2]];
 endmodule

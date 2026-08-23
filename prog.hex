@@ -1,0 +1,35 @@
+00a00093    // 0x00  addi x1, x0, 10
+01400113    // 0x04  addi x2, x0, 20
+002081b3    // 0x08  add  x3, x1, x2
+40110233    // 0x0c  sub  x4, x2, x1
+0020f2b3    // 0x10  and  x5, x1, x2
+0020e333    // 0x14  or   x6, x1, x2
+0020c3b3    // 0x18  xor  x7, x1, x2
+0020a433    // 0x1c  slt  x8, x1, x2
+00302023    // 0x20  sw   x3, 0(x0)
+00002483    // 0x24  lw   x9, 0(x0)
+00408463    // 0x28  beq  x1, x4, +8   TAKEN
+06300513    // 0x2c  addi x10, x0, 99  SKIPPED
+00700593    // 0x30  addi x11, x0, 7
+00209463    // 0x34  bne  x1, x2, +8   TAKEN
+06300613    // 0x38  addi x12, x0, 99  SKIPPED
+123456b7    // 0x3c  lui  x13, 0x12345
+00000717    // 0x40  auipc x14, 0
+008007ef    // 0x44  jal  x15, +8      TAKEN
+06300813    // 0x48  addi x16, x0, 99  SKIPPED
+05800893    // 0x4c  addi x17, x0, 0x58
+00088967    // 0x50  jalr x18, x17, 0  TAKEN
+06300993    // 0x54  addi x19, x0, 99  SKIPPED
+02a00a13    // 0x58  addi x20, x0, 42
+fff00a93    // 0x5c  addi x21, x0, -1
+001adb33    // 0x60  srl  x22, x21, x1
+401adbb3    // 0x64  sra  x23, x21, x1
+00109c33    // 0x68  sll  x24, x1, x1
+001abcb3    // 0x6c  sltu x25, x21, x1
+001aad33    // 0x70  slt  x26, x21, x1
+001ac463    // 0x74  blt  x21, x1, +8  TAKEN
+06300d93    // 0x78  addi x27, x0, 99  SKIPPED
+0150d463    // 0x7c  bge  x1, x21, +8  TAKEN
+06300e13    // 0x80  addi x28, x0, 99  SKIPPED
+00100e93    // 0x84  addi x29, x0, 1
+0000006f    // 0x88  jal  x0, 0        HALT
