@@ -1,126 +1,191 @@
-// regfile_tb.v -- 寄存器堆自检式 testbench
-// 测试计划:
-//   T1: 依次写满全部8个寄存器, 用读端口1逐个读回比对
-//   T2: 用读端口2读回同一批数据 (验证双端口独立)
-//   T3: 双端口同时读不同地址 (验证互不干扰)
-//   T4: we=0 时写入无效 (数据不应改变)
-//   T5: 读写同地址同周期 -> 应读到旧值 (read-first 行为验证)
-`timescale 1ns/1ps
+// ============================================================================
+// tb_regfile.v -- self-checking testbench for the RV32I register file
+//
+// Run:
+//   iverilog -o tb_regfile.vvp rtl/regfile.v tb/tb_regfile.v
+//   vvp tb_regfile.vvp
+//
+// Expected result: 45/45 PASSED
+// ============================================================================
 
-module regfile_tb;
+`timescale 1ns / 1ps
 
-    localparam WIDTH  = 8;
-    localparam DEPTH  = 8;
-    localparam ADDR_W = 3;
+module tb_regfile;
 
-    reg                clk;
-    reg                we;
-    reg  [ADDR_W-1:0]  waddr, raddr1, raddr2;
-    reg  [WIDTH-1:0]   wdata;
-    wire [WIDTH-1:0]   rdata1, rdata2;
+    reg         clk;
+    reg         we;
+    reg  [4:0]  rs1_addr;
+    reg  [4:0]  rs2_addr;
+    reg  [4:0]  rd_addr;
+    reg  [31:0] rd_data;
+    wire [31:0] rs1_data;
+    wire [31:0] rs2_data;
 
-    integer errors = 0;
-    integer i;
+    integer pass_count;
+    integer fail_count;
+    integer k;
+    reg [31:0] expected;
 
-    regfile #(.WIDTH(WIDTH), .DEPTH(DEPTH)) dut (
-        .clk(clk), .we(we),
-        .waddr(waddr), .wdata(wdata),
-        .raddr1(raddr1), .rdata1(rdata1),
-        .raddr2(raddr2), .rdata2(rdata2)
+    regfile dut (
+        .clk      (clk),
+        .we       (we),
+        .rs1_addr (rs1_addr),
+        .rs2_addr (rs2_addr),
+        .rd_addr  (rd_addr),
+        .rd_data  (rd_data),
+        .rs1_data (rs1_data),
+        .rs2_data (rs2_data)
     );
 
+    // 10 ns clock
+    initial clk = 1'b0;
     always #5 clk = ~clk;
 
-    // 检查任务: 期望值 vs 实际值
+    // ------------------------------------------------------------------
+    // Checker
+    // ------------------------------------------------------------------
     task check;
-        input [WIDTH-1:0] expected, actual;
-        input [8*40-1:0]  msg;
+        input [31:0] got;
+        input [31:0] want;
+        input [8*40:1] label;
         begin
-            if (actual !== expected) begin
-                errors = errors + 1;
-                $display("FAIL: %0s  expected=%h actual=%h (t=%0t)",
-                         msg, expected, actual, $time);
+            if (got === want) begin
+                pass_count = pass_count + 1;
+                $display("PASS  %0s  got=%h", label, got);
             end else begin
-                $display("PASS: %0s  value=%h", msg, actual);
+                fail_count = fail_count + 1;
+                $display("FAIL  %0s  got=%h  expected=%h", label, got, want);
             end
         end
     endtask
 
-    // 同步写一个寄存器
-    task write_reg;
-        input [ADDR_W-1:0] a;
-        input [WIDTH-1:0]  d;
+    // Drive one write on the next rising edge, then settle.
+    task do_write;
+        input [4:0]  addr;
+        input [31:0] data;
         begin
-            @(negedge clk);       // 在下降沿改激励, 避开采样沿
-            we = 1; waddr = a; wdata = d;
+            @(negedge clk);
+            we      = 1'b1;
+            rd_addr = addr;
+            rd_data = data;
             @(posedge clk);
-            #1;                   // 越过NBA更新区 (老教训)
-            we = 0;
+            #1;
+            we = 1'b0;
         end
     endtask
 
+    // ------------------------------------------------------------------
+    // Test sequence
+    // ------------------------------------------------------------------
     initial begin
-        $dumpfile("regfile_tb.vcd");
-        $dumpvars(0, regfile_tb);
+        pass_count = 0;
+        fail_count = 0;
+        we         = 1'b0;
+        rs1_addr   = 5'd0;
+        rs2_addr   = 5'd0;
+        rd_addr    = 5'd0;
+        rd_data    = 32'h0;
 
-        clk = 0; we = 0;
-        waddr = 0; wdata = 0; raddr1 = 0; raddr2 = 0;
+        $display("=== regfile testbench ===");
 
-        // ---- T1: 写满 + 端口1读回 ----
-        for (i = 0; i < DEPTH; i = i + 1)
-            write_reg(i[ADDR_W-1:0], {i[3:0], 4'hA});  // 写入 0A,1A,2A...
-
-        for (i = 0; i < DEPTH; i = i + 1) begin
-            raddr1 = i[ADDR_W-1:0];
-            #1;   // 异步读, 给组合逻辑一点传播时间
-            check({i[3:0], 4'hA}, rdata1, "T1 port1 readback");
-        end
-
-        // ---- T2: 端口2读回 ----
-        for (i = 0; i < DEPTH; i = i + 1) begin
-            raddr2 = i[ADDR_W-1:0];
-            #1;
-            check({i[3:0], 4'hA}, rdata2, "T2 port2 readback");
-        end
-
-        // ---- T3: 双端口同时读不同地址 ----
-        raddr1 = 3'd2; raddr2 = 3'd5;
-        #1;
-        check(8'h2A, rdata1, "T3 port1 addr2");
-        check(8'h5A, rdata2, "T3 port2 addr5");
-
-        // ---- T4: we=0 写无效 ----
+        // --------------------------------------------------------------
+        // Phase 1: everything reads zero after init (3 checks)
+        // --------------------------------------------------------------
         @(negedge clk);
-        we = 0; waddr = 3'd2; wdata = 8'hFF;   // 试图写但we=0
+        rs1_addr = 5'd0;  rs2_addr = 5'd1;  #1;
+        check(rs1_data, 32'h0, "init x0 reads zero");
+        check(rs2_data, 32'h0, "init x1 reads zero");
+        rs1_addr = 5'd31; #1;
+        check(rs1_data, 32'h0, "init x31 reads zero");
+
+        // --------------------------------------------------------------
+        // Phase 2: write to x0 is discarded (1 check)
+        // --------------------------------------------------------------
+        do_write(5'd0, 32'hDEAD_BEEF);
+        rs1_addr = 5'd0; #1;
+        check(rs1_data, 32'h0, "write to x0 discarded");
+
+        // --------------------------------------------------------------
+        // Phase 3: write x1..x31, then read them all back (31 checks)
+        // --------------------------------------------------------------
+        for (k = 1; k < 32; k = k + 1) begin
+            do_write(k[4:0], 32'h1234_0000 + k);
+        end
+        for (k = 1; k < 32; k = k + 1) begin
+            @(negedge clk);
+            rs1_addr = k[4:0]; #1;
+            expected = 32'h1234_0000 + k;
+            check(rs1_data, expected, "readback x1..x31");
+        end
+
+        // --------------------------------------------------------------
+        // Phase 4: both ports read different registers (2 checks)
+        // --------------------------------------------------------------
+        @(negedge clk);
+        rs1_addr = 5'd1;  rs2_addr = 5'd31; #1;
+        check(rs1_data, 32'h1234_0001, "port1 reads x1");
+        check(rs2_data, 32'h1234_001F, "port2 reads x31");
+
+        // --------------------------------------------------------------
+        // Phase 5: both ports read the same register (2 checks)
+        // --------------------------------------------------------------
+        @(negedge clk);
+        rs1_addr = 5'd7;  rs2_addr = 5'd7; #1;
+        check(rs1_data, 32'h1234_0007, "port1 reads x7");
+        check(rs2_data, 32'h1234_0007, "port2 reads x7 same cycle");
+
+        // --------------------------------------------------------------
+        // Phase 6: we = 0 blocks the write (1 check)
+        // --------------------------------------------------------------
+        @(negedge clk);
+        we      = 1'b0;
+        rd_addr = 5'd10;
+        rd_data = 32'hFFFF_FFFF;
         @(posedge clk);
         #1;
-        raddr1 = 3'd2;
-        #1;
-        check(8'h2A, rdata1, "T4 write disabled");
+        rs1_addr = 5'd10; #1;
+        check(rs1_data, 32'h1234_000A, "we=0 does not write x10");
 
-        // ---- T5: 读写同地址同周期, 应读到旧值 ----
+        // --------------------------------------------------------------
+        // Phase 7: same-cycle read/write returns OLD value (2 checks)
+        // --------------------------------------------------------------
         @(negedge clk);
-        we = 1; waddr = 3'd4; wdata = 8'h99;
-        raddr1 = 3'd4;
-        @(posedge clk);        // 就在这个沿写入发生
-        // 沿之前的瞬间读端口看到的是旧值; 沿之后NBA更新
-        // 这里检查沿之后: 新值已可见
+        we       = 1'b1;
+        rd_addr  = 5'd5;
+        rd_data  = 32'hCAFE_0005;
+        rs1_addr = 5'd5;
         #1;
-        we = 0;
-        check(8'h99, rdata1, "T5a after edge: new value visible");
-        // 再验证写入确实持久化了
-        @(negedge clk);
-        raddr2 = 3'd4;
+        check(rs1_data, 32'h1234_0005, "same-cycle read sees OLD value");
+        @(posedge clk);
         #1;
-        check(8'h99, rdata2, "T5b persisted");
+        we = 1'b0;
+        check(rs1_data, 32'hCAFE_0005, "after edge read sees NEW value");
 
-        // ---- 汇总 ----
-        $display("=====================================");
-        if (errors == 0)
-            $display("ALL TESTS PASSED");
-        else
-            $display("%0d TEST(S) FAILED", errors);
-        $display("=====================================");
+        // --------------------------------------------------------------
+        // Phase 8: all-zero and all-one data patterns (2 checks)
+        // --------------------------------------------------------------
+        do_write(5'd31, 32'h0000_0000);
+        rs1_addr = 5'd31; #1;
+        check(rs1_data, 32'h0000_0000, "write all-zero to x31");
+
+        do_write(5'd31, 32'hFFFF_FFFF);
+        rs1_addr = 5'd31; #1;
+        check(rs1_data, 32'hFFFF_FFFF, "write all-one to x31");
+
+        // --------------------------------------------------------------
+        // Phase 9: writing x0 does not corrupt neighbours (1 check)
+        // --------------------------------------------------------------
+        do_write(5'd0, 32'hAAAA_AAAA);
+        rs1_addr = 5'd1; #1;
+        check(rs1_data, 32'h1234_0001, "x0 write leaves x1 intact");
+
+        // --------------------------------------------------------------
+        // Summary
+        // --------------------------------------------------------------
+        $display("=========================================");
+        $display("RESULT: %0d/%0d PASSED, %0d FAILED",
+                 pass_count, pass_count + fail_count, fail_count);
+        $display("=========================================");
         $finish;
     end
 
