@@ -1,0 +1,44 @@
+WARNING: rtl/imem.v:17: $readmemh(prog.hex): Not enough words in the file for the requested range [0:255].
+=== single-cycle core testbench ===
+--- register file ---
+PASS  x0  hardwired zero  got=00000000
+PASS  x1  addi 10  got=0000000a
+PASS  x2  addi 20  got=00000014
+PASS  x3  add  got=0000001e
+PASS  x4  sub  got=0000000a
+PASS  x5  and  got=00000000
+PASS  x6  or  got=0000001e
+PASS  x7  xor  got=0000001e
+PASS  x8  slt  got=00000001
+PASS  x9  lw  got=0000001e
+PASS  x10 beq skipped it  got=00000000
+PASS  x11 addi 7  got=00000007
+PASS  x12 bne skipped it  got=00000000
+PASS  x13 lui  got=12345000
+PASS  x14 auipc  got=00000040
+PASS  x15 jal link addr  got=00000048
+PASS  x16 jal skipped it  got=00000000
+PASS  x17 addi 0x58  got=00000058
+PASS  x18 jalr link addr  got=00000054
+PASS  x19 jalr skipped it  got=00000000
+PASS  x20 addi 42  got=0000002a
+PASS  x21 addi -1 sign ext  got=ffffffff
+PASS  x22 srl logical  got=003fffff
+PASS  x23 sra arithmetic  got=ffffffff
+PASS  x24 sll  got=00002800
+PASS  x25 sltu unsigned  got=00000000
+PASS  x26 slt signed  got=00000001
+PASS  x27 blt skipped it  got=00000000
+PASS  x28 bge skipped it  got=00000000
+PASS  x29 addi 1  got=00000001
+PASS  x30 never written  got=00000000
+PASS  x31 never written  got=00000000
+--- data memory ---
+PASS  dmem[0] sw stored x3  got=0000001e
+--- program counter ---
+PASS  pc parked at halt loop  got=00000088
+PASS  pc still at halt after 10 more cycles  got=00000088
+=========================================
+RESULT: 35/35 PASSED, 0 FAILED
+=========================================
+tb/top_tb.v:150: $finish called at 616000 (1ps)
